@@ -14,6 +14,7 @@ const uint8_t led_green_pino = 13;
 const uint8_t btn_a = 5;
 
 const uint8_t servo_pino = 22;
+const uint16_t duty_ciclo[] = {16384, 32786, 49152, 65535};
 
 #define I2C_PORT i2c1
 #define I2C_SDA 14
@@ -26,8 +27,6 @@ void gpio_irq_handler(uint gpio, uint32_t events);
 int main(){
     stdio_init_all();
     iniciar_pinos();
-
-    //pwm_set_clkdiv();
 
     i2c_init(I2C_PORT, 400 * 1000);
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
@@ -42,12 +41,19 @@ int main(){
     ssd1306_send_data(&ssd);
     bool cor = true;
 
+    gpio_set_function(servo_pino, GPIO_FUNC_PWM);
+    uint slice_numero = pwm_gpio_to_slice_num(servo_pino);
+    pwm_set_wrap(slice_numero, 65535);
+    pwm_set_chan_level(slice_numero, pwm_gpio_to_channel(servo_pino), duty_ciclo[0]);
+    pwm_set_enabled(slice_numero, true);
+
     gpio_set_irq_enabled_with_callback(btn_a, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
 
-    while (true) {
+
+    while(true){
         ssd1306_fill(&ssd, !cor);
         ssd1306_rect(&ssd, 3, 3, 122, 58, cor, !cor);
-        ssd1306_draw_string(&ssd, "VERM.: TRUE", 15, 10);
+        ssd1306_draw_string(&ssd, "AZUL: FALSE", 15, 10);
         ssd1306_draw_string(&ssd, "AZUL: FALSE", 15, 30);
         ssd1306_draw_string(&ssd, "VERDE: TRUE", 15, 50);
         ssd1306_send_data(&ssd);
@@ -69,9 +75,6 @@ void iniciar_pinos(){
     gpio_init(btn_a);
     gpio_set_dir(btn_a, GPIO_IN);
     gpio_pull_up(btn_a);
-    
-    gpio_init(servo_pino);
-    gpio_set_function(servo_pino, GPIO_FUNC_PWM);
 }
 
 void gpio_irq_handler(uint gpio, uint32_t events){
